@@ -1,0 +1,166 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Stack;
+
+public class ScientificCalculator extends JFrame implements ActionListener {
+    private JTextField display;
+    private StringBuilder currentInput;
+    private boolean isResultDisplayed;
+
+    public ScientificCalculator() {
+        setTitle("Scientific Calculator");
+        setSize(500, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        display = new JTextField();
+        display.setEditable(false);
+        display.setFont(new Font("Arial", Font.PLAIN, 20));
+        add(display, BorderLayout.NORTH);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(6, 4));
+
+        String[] buttons = {
+            "7", "8", "9", "/",
+            "4", "5", "6", "*",
+            "1", "2", "3", "-",
+            "0", ".", "=", "+",
+            "sin", "cos", "tan", "log",
+            "sqrt", "^", "(", ")"
+        };
+
+        for (String text : buttons) {
+            JButton button = new JButton(text);
+            button.setFont(new Font("Arial", Font.PLAIN, 20));
+            button.addActionListener(this);
+            buttonPanel.add(button);
+        }
+
+        add(buttonPanel, BorderLayout.CENTER);
+
+        currentInput = new StringBuilder();
+        isResultDisplayed = false;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        String command = e.getActionCommand();
+
+        if ("0123456789.".contains(command)) {
+            if (isResultDisplayed) {
+                currentInput.setLength(0);
+                isResultDisplayed = false;
+            }
+            currentInput.append(command);
+            display.setText(currentInput.toString());
+        } else if ("+-*/^()".contains(command)) {
+            if (isResultDisplayed) {
+                isResultDisplayed = false;
+            }
+            currentInput.append(command);
+            display.setText(currentInput.toString());
+        } else if ("sin".equals(command)) {
+            double result = Math.sin(Math.toRadians(Double.parseDouble(currentInput.toString())));
+            displayResult(result);
+        } else if ("cos".equals(command)) {
+            double result = Math.cos(Math.toRadians(Double.parseDouble(currentInput.toString())));
+            displayResult(result);
+        } else if ("tan".equals(command)) {
+            double result = Math.tan(Math.toRadians(Double.parseDouble(currentInput.toString())));
+            displayResult(result);
+        } else if ("log".equals(command)) {
+            double result = Math.log10(Double.parseDouble(currentInput.toString()));
+            displayResult(result);
+        } else if ("sqrt".equals(command)) {
+            double result = Math.sqrt(Double.parseDouble(currentInput.toString()));
+            displayResult(result);
+        } else if ("=".equals(command)) {
+            double result = evaluate(currentInput.toString());
+            displayResult(result);
+        }
+    }
+
+    private void displayResult(double result) {
+        display.setText(String.valueOf(result));
+        currentInput.setLength(0);
+        currentInput.append(result);
+        isResultDisplayed = true;
+    }
+
+    private double evaluate(String expression) {
+        // Simple evaluation logic using stacks
+        Stack<Double> values = new Stack<>();
+        Stack<Character> operators = new Stack<>();
+
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+
+            if (Character.isDigit(c) || c == '.') {
+                StringBuilder sb = new StringBuilder();
+                while (i < expression.length() && (Character.isDigit(expression.charAt(i)) || expression.charAt(i) == '.')) {
+                    sb.append(expression.charAt(i++));
+                }
+                values.push(Double.parseDouble(sb.toString()));
+                i--;
+            } else if (c == '(') {
+                operators.push(c);
+            } else if (c == ')') {
+                while (operators.peek() != '(') {
+                    values.push(applyOp(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.pop();
+            } else if ("+-*/^".indexOf(c) >= 0) {
+                while (!operators.isEmpty() && hasPrecedence(c, operators.peek())) {
+                    values.push(applyOp(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.push(c);
+            }
+        }
+
+        while (!operators.isEmpty()) {
+            values.push(applyOp(operators.pop(), values.pop(), values.pop()));
+        }
+
+        return values.pop();
+    }
+
+    private boolean hasPrecedence(char op1, char op2) {
+        if (op2 == '(' || op2 == ')') {
+            return false;
+        }
+        if ((op1 == '*' || op1 == '/') && (op2 == '+' || op2 == '-')) {
+            return false;
+        }
+        return true;
+    }
+
+    private double applyOp(char op, double b, double a) {
+        switch (op) {
+            case '+':
+                return a + b;
+            case '-':
+                return a - b;
+            case '*':
+                return a * b;
+            case '/':
+                if (b == 0) {
+                    throw new UnsupportedOperationException("Cannot divide by zero");
+                }
+                return a / b;
+            case '^':
+                return Math.pow(a, b);
+        }
+        return 0;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ScientificCalculator calculator = new ScientificCalculator();
+            calculator.setVisible(true);
+        });
+    }
+}
+
